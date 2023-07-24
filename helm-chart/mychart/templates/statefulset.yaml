@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mychart.fullname" . }}-web
+  labels:
+  {{- include "mychart.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  serviceName: {{ include "mychart.fullname" . }}-nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.web.nginx.image.repository }}:{{ .Values.web.nginx.image.tag
+          | default .Chart.AppVersion }}
+        name: nginx
+        ports:
+        - containerPort: 80
+          name: web
+        resources: {{- toYaml .Values.web.nginx.resources | nindent 10 }}
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: myvolume
+  updateStrategy: {}
+  volumeClaimTemplates:
+  - metadata:
+      creationTimestamp: null
+      name: myvolume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources: {{ .Values.web.volumeClaims.myvolume | toYaml | nindent 8 }}
+      storageClassName: my-storage-class

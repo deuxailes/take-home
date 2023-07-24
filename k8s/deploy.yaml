@@ -1,0 +1,56 @@
+# Just referenced the StatefulSet doc for this one -> https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+# Validated by https://validkube.com/, too lazy to set up a cluster on Sunday night :)
+
+# A service is needed for any given stateful set.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 80 
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  serviceName: nginx
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: registry.k8s.io/nginx-slim:0.8
+        resources:
+          requests:
+            cpu: "250m"
+          limits:
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts: # Allows each pod and container to access this shared, persistent directory, even after restart.
+        - name: myvolume
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: myvolume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "my-storage-class"
+      resources:
+        requests:
+          storage: 1Gi
